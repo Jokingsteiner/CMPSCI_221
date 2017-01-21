@@ -15,7 +15,7 @@ public class TxProcPart1 {
 
     public List<String> tokenize(String textFilePath) {
         File file = new File(textFilePath);
-        FileReader fr;
+        FileReader fr = null;
         try {
             fr = new FileReader(file);
             BufferedReader buffReader = new BufferedReader(fr);
@@ -32,6 +32,12 @@ public class TxProcPart1 {
             System.out.println("File not Found");
         } catch (IOException e) {
             System.out.println("File read IO exception caught");
+        } finally {
+            try {
+                fr.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         return tokenList;

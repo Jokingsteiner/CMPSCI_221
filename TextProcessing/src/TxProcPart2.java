@@ -10,8 +10,8 @@ import java.util.List;
  */
 public class TxProcPart2 {
     private FileReaderWBuffer fr1, fr2;
-    // testing
-    public HashSet<String> commonList = null;
+//    testing
+//    public HashSet<String> commonList = null;
 
     public TxProcPart2(String filePath1, String filePath2) throws FileNotFoundException {
         fr1 = new FileReaderWBuffer(filePath1);
@@ -33,7 +33,7 @@ public class TxProcPart2 {
             tokenSet2.addAll(getTokenFromString(line));
         }
         cmnTokenSet.retainAll(tokenSet2);
-        commonList = new HashSet<String>(cmnTokenSet);
+//        commonList = new HashSet<String>(cmnTokenSet);
 
         fr1.close();
         fr2.close();
@@ -56,7 +56,7 @@ public class TxProcPart2 {
         System.out.println("FilePath2: " + arg[1]);
         TxProcPart2 object = new TxProcPart2(arg[0], arg[1]);
         System.out.println(object.findIntersection1());
-        for (String s : object.commonList)
-            System.out.println(s);
+        /*for (String s : object.commonList)
+            System.out.println(s);*/
     }
 }

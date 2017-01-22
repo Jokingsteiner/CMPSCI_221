@@ -22,7 +22,7 @@ public class TxProcPart1 {
             String line;
             String[] tokenOfLine;
             while ((line = buffReader.readLine()) != null){
-                tokenOfLine = line.split("[^\\w]+");                                                                // \W is a non-alphanum set, + means these delimiter occur one or more times
+                tokenOfLine = line.split("[^\\w]+");                                                                // \W is a non-alphanumeric set, + means these delimiter occur one or more times
                 for (String s: tokenOfLine) {
                     if (s.length() != 0)
                     tokenList.add(s.toLowerCase());
@@ -34,6 +34,7 @@ public class TxProcPart1 {
             System.out.println("File read IO exception caught");
         } finally {
             try {
+                if (fr != null)
                 fr.close();
             } catch (IOException e) {
                 e.printStackTrace();

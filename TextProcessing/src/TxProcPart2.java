@@ -10,12 +10,12 @@ import java.util.List;
  */
 public class TxProcPart2 {
     private FileReaderWBuffer fr1, fr2;
-    private String filePath1, filePath2;
+    // testing
+    public HashSet<String> commonList = null;
 
     public TxProcPart2(String filePath1, String filePath2) throws FileNotFoundException {
         fr1 = new FileReaderWBuffer(filePath1);
         fr2 = new FileReaderWBuffer(filePath2);
-        this.filePath2 = filePath2;
     }
 
     // brutal method
@@ -33,6 +33,7 @@ public class TxProcPart2 {
             tokenSet2.addAll(getTokenFromString(line));
         }
         cmnTokenSet.retainAll(tokenSet2);
+        commonList = new HashSet<String>(cmnTokenSet);
 
         fr1.close();
         fr2.close();
@@ -41,7 +42,7 @@ public class TxProcPart2 {
 
     private List<String> getTokenFromString (String str) {
         List<String> tokenList = new ArrayList<>();
-        String[] tokenOfLine = str.split("[^\\w]+");                                                                // \W is a non-alphanum set, + means these delimiter occur one or more times
+        String[] tokenOfLine = str.split("[^\\w]+");                                                                // \W is a non-alphanumeric set, + means these delimiter occur one or more times
         for (String s: tokenOfLine) {
             if (s.length() != 0)
                 tokenList.add(s.toLowerCase());
@@ -49,10 +50,13 @@ public class TxProcPart2 {
         return tokenList;
     }
 
-    public static void main (String arg[]){
+    public static void main (String arg[]) throws FileNotFoundException {
         System.out.println("Finding Intersections");
-        System.out.println("FilePath: " + arg[0]);
-        TxProcPart1 object = new TxProcPart1();
-        List<String> tokenList = object.tokenize(arg[0]);
+        System.out.println("FilePath1: " + arg[0]);
+        System.out.println("FilePath2: " + arg[1]);
+        TxProcPart2 object = new TxProcPart2(arg[0], arg[1]);
+        System.out.println(object.findIntersection1());
+        for (String s : object.commonList)
+            System.out.println(s);
     }
 }

@@ -62,7 +62,8 @@ public class TxProcPart1 {
         List<Map.Entry<String, Integer>> sortList = new ArrayList<>(frequenciesMap.entrySet());
         sortList.sort(BY_VALUE);
         for (Map.Entry<String, Integer> e: sortList){
-            System.out.println("\"" + e.getKey() + "\", " + e.getValue());
+//            System.out.println("\"" + e.getKey() + "\", " + e.getValue());
+            System.out.println(e.getKey() + ", " + e.getValue());
         }
     }
 

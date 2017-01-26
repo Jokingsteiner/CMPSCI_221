@@ -24,7 +24,7 @@ public class TxProcPart3 {
         this.finalMap = new TreeMap<>();
     }
 
-    public void merge(){
+    public void merge2(){
         String line;
         while ((line = fr1.readLine()) != null){
             List<String> tokens = getTokenFromString(line);
@@ -42,6 +42,49 @@ public class TxProcPart3 {
         fr2.close();
         fw.close();
     }
+
+    public void merge(){
+        String line1 = null, line2 = null;
+        List<String> tokens1 = null, tokens2 = null;
+        line1 = fr1.readLine();
+        line2 = fr2.readLine();
+        while ( line1 != null && line2 != null) {
+            tokens1 = getTokenFromString(line1);
+            tokens2 = getTokenFromString(line2);
+            if ( tokens1.get(0).compareTo(tokens2.get(0)) < 0 ) {                                                       //tokens1[0] is smaller
+                fw.writeLine( tokens1.get(0) + ", " +  tokens1.get(1));
+                line1 = fr1.readLine();
+            }
+            else if ( tokens1.get(0).compareTo(tokens2.get(0)) > 0 ) {                                                  //tokens1[0] is bigger
+                fw.writeLine( tokens2.get(0) + ", " +  tokens2.get(1));
+                line2 = fr2.readLine();
+            }
+            else {                                                                                                       //equal
+                int sum =  Integer.parseInt(tokens1.get(1)) + Integer.parseInt(tokens2.get(1));
+                fw.writeLine( tokens1.get(0) + ", " +  sum);
+                line1 = fr1.readLine();
+                line2 = fr2.readLine();
+            }
+        }
+
+        if ( line1 == null) {
+            do {
+                tokens2 = getTokenFromString(line2);
+                fw.writeLine(tokens2.get(0) + ", " + tokens2.get(1));
+            } while ((line2 = fr2.readLine()) != null);
+        }
+        else if (line2 == null) {
+            do {
+                tokens1 = getTokenFromString(line1);
+                fw.writeLine(tokens1.get(0) + ", " + tokens1.get(1));
+            } while ((line1 = fr1.readLine()) != null);
+        }
+
+        fr1.close();
+        fr2.close();
+        fw.close();
+    }
+
 /*
     private static class ByKeyAlphabetically implements Comparator<Map.Entry<String, Integer>> {
         @Override

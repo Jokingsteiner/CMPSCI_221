@@ -55,7 +55,9 @@ public class TxProcPart2 {
         System.out.println("FilePath1: " + arg[0]);
         System.out.println("FilePath2: " + arg[1]);
         TxProcPart2 object = new TxProcPart2(arg[0], arg[1]);
+        long start = System.currentTimeMillis();
         System.out.println(object.findIntersection1());
+        System.out.println(String.format("Time cost1 : %s ms", System.currentTimeMillis() - start));
         /*for (String s : object.commonList)
             System.out.println(s);*/
     }

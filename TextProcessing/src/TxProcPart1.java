@@ -71,10 +71,13 @@ public class TxProcPart1 {
         System.out.println("Text Processing Start");
         System.out.println("FilePath: " + arg[0]);
         TxProcPart1 object = new TxProcPart1();
+        long start = System.currentTimeMillis();
         List<String> tokenList = object.tokenize(arg[0]);
 /*        for (String s : tokenList){
             System.out.println(s);
         }*/
+        System.out.println(String.format("Time cost1 : %s ms", System.currentTimeMillis() - start));
         object.print(object.computeWordFrequencies(tokenList));
+        System.out.println(String.format("Time cost2 : %s ms", System.currentTimeMillis() - start));
     }
 }

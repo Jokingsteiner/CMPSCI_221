@@ -42,7 +42,7 @@ public class TxProcPart2 {
 
     private List<String> getTokenFromString (String str) {
         List<String> tokenList = new ArrayList<>();
-        String[] tokenOfLine = str.split("[^\\w]+");                                                                // \W is a non-alphanumeric set, + means these delimiter occur one or more times
+        String[] tokenOfLine = str.split("[^a-zA-Z0-9]+");                                                                // \W is a non-alphanumeric set, + means these delimiter occur one or more times
         for (String s: tokenOfLine) {
             if (s.length() != 0)
                 tokenList.add(s.toLowerCase());

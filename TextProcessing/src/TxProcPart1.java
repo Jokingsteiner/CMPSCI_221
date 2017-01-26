@@ -22,7 +22,7 @@ public class TxProcPart1 {
             String line;
             String[] tokenOfLine;
             while ((line = buffReader.readLine()) != null){
-                tokenOfLine = line.split("[^\\w]+");                                                                // \W is a non-alphanumeric set, + means these delimiter occur one or more times
+                tokenOfLine = line.split("[^a-zA-Z0-9]+");                                                                // \W is a non-alphanumeric set, + means these delimiter occur one or more times
                 for (String s: tokenOfLine) {
                     if (s.length() != 0)
                     tokenList.add(s.toLowerCase());
@@ -62,7 +62,6 @@ public class TxProcPart1 {
         List<Map.Entry<String, Integer>> sortList = new ArrayList<>(frequenciesMap.entrySet());
         sortList.sort(BY_VALUE);
         for (Map.Entry<String, Integer> e: sortList){
-//            System.out.println("\"" + e.getKey() + "\", " + e.getValue());
             System.out.println(e.getKey() + ", " + e.getValue());
         }
     }

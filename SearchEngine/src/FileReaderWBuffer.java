@@ -48,7 +48,7 @@ public class FileReaderWBuffer {
     public void close() {
         try {
             if (br != null && fr != null)
-                br.close();
+            br.close();
         } catch (IOException e) {
             System.out.println("BufferedReader close failed!");
             e.printStackTrace();

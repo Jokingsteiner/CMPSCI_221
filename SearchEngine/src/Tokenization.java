@@ -28,9 +28,9 @@ public class Tokenization {
         return tokenList;
     }
 
-    public List<String> getTokensFromString (String str) {
+    public List<String> getTokensFromString (String str, String splitRegEx) {
         List<String> tokenList = new ArrayList<>();
-        String[] tokenOfLine = str.split("[^a-zA-Z0-9]+");                                                                // \W is a non-alphanumeric set, + means these delimiter occur one or more times
+        String[] tokenOfLine = str.split(splitRegEx);
         for (String s: tokenOfLine) {
             if (s.length() != 0)
                 tokenList.add(s.toLowerCase());

@@ -22,21 +22,26 @@ public class Indexing {
         this.patternBetweenMarkers = Pattern.compile(regexBetweenMarkers);
     }
 
-    private class PostingNode {
+    private class DocPair {
         double tfIdf;
+        String docID;
+
+        public DocPair(double tfIdf, String docID) {
+            this.tfIdf = tfIdf;
+            this.docID = docID;
+        }
+    }
+
+    private class PostingNode {
         String word;
-        LinkedList<String> docIDList = new LinkedList<String>();
+        LinkedList<DocPair> pairList = new LinkedList<DocPair>();
 
         public PostingNode(String word) {
             this.word = word;
         }
 
-        public void setTFIDF (double tfIdf) {
-            this.tfIdf = tfIdf;
-        }
-
-        public void addDocID (String docID) {
-            this.docIDList.add(docID);
+        public void addPair (double tfIdf, String docID) {
+            pairList.add(new DocPair(tfIdf, docID));
         }
     }
 
@@ -59,7 +64,7 @@ public class Indexing {
                 while (matcher.find()) {
                     System.out.println(folderID + "/" + docID + ": " + matcher.group(1));
                     tokenList = tokenizer.getTokensFromString(matcher.group(1), "[^a-zA-Z0-9]+");
-//                  NOT FINISHED, tf and idf is done by another python program
+//                  FIXME: NOT FINISHED, tf and idf is done by another python program
                     for (String s : tokenList) {
 //                        fw.writeLine(token);
                     }
@@ -89,16 +94,14 @@ public class Indexing {
         while ( tfLine != null && dfLine != null) {
             dfTokens = tokenizer.getTokensFromString(dfLine, "[^a-zA-Z0-9/]+");                               // \W is a non-alphanumeric set, + means these delimiter occur one or more times
             int docFreq = Integer.parseInt(dfTokens.get(1));
-            PostingNode newNode = new PostingNode(dfTokens.get(0));
+            PostingNode newNode = new PostingNode(dfTokens.get(0)); // initialized with term
             for (int i = 0; i < docFreq; i++) {
                 tfTokens = tokenizer.getTokensFromString(tfLine, "[^a-zA-Z0-9/]+");                           // \W is a non-alphanumeric set, + means these delimiter occur one or more times
                 if ( tfTokens.get(0).compareTo(dfTokens.get(0)) == 0 ) {                                                // make sure we are processing same term
                     double tfIdf = calculateTFIDF(Integer.parseInt(tfTokens.get(1)), Integer.parseInt(dfTokens.get(1)), NUM_OF_DOCUMENTS);
-                    if (i == 0)
-                        newNode.setTFIDF (tfIdf);
-                    newNode.addDocID(tfTokens.get(2));
-                // move to next tf, still same word
-                tfLine = tfReader.readLine();
+                    newNode.addPair(tfIdf, tfTokens.get(2)); //diff in diff docs
+                    // move to next tf, still same word
+                    tfLine = tfReader.readLine();
                 }
                 else {
                     throw new IllegalArgumentException("Mismatching words: " + tfTokens.get(0) + "   " + dfTokens.get(0));
@@ -111,12 +114,12 @@ public class Indexing {
 
         for (PostingNode node : nodeQueue) {
 //            if (node.word.length() < 1)
-//                writeString = String.format("%-50s", node.word) + String.format("%10f", node.tfIdf) + "   ";
+//                writeString = String.format("%-50s", node.word) + String.format("%10f", node.tfIdf) + "   "+ node.docID;
 //            else
-                writeString = node.word + " " + String.format("%f", node.tfIdf) + " ";
+                  writeString = node.word + " ";
 
-            for (String s : node.docIDList) {
-                writeString = writeString + s + " ";
+            for (DocPair p: node.pairList) {
+                writeString = writeString + p.tfIdf + " " + p.docID + " ";
             }
             tfidfWriter.writeLine(writeString);
         }
@@ -128,10 +131,16 @@ public class Indexing {
 
     public static void main (String arg[]){
         long start = System.currentTimeMillis();
-
+        String titleTF = ".\\\\SearchEngine\\\\resources\\\\titleIndex\\\\sorttf.txt";
+        String titleDF = ".\\\\SearchEngine\\\\resources\\\\titleIndex\\\\indexdf.txt";
+        String titleTfIdf = ".\\\\SearchEngine\\\\resources\\\\titleIndex\\\\title_tfidfWeight.txt";
+        String contextTF = ".\\\\SearchEngine\\\\resources\\\\contextIndex\\\\sortptf.txt";
+        String contextDF = ".\\\\SearchEngine\\\\resources\\\\contextIndex\\\\indexpdf.txt";
+        String contextTfIdf = ".\\\\SearchEngine\\\\resources\\\\contextIndex\\\\context_tfidfWeight.txt";
         Indexing testIndexer = new Indexing();
 //        testIndexer.buildIndex();
-        testIndexer.buildTFIDF(arg[0], arg[1], arg[2]);
+        testIndexer.buildTFIDF(titleTF, titleDF, titleTfIdf);
+        testIndexer.buildTFIDF(contextTF, contextDF, contextTfIdf);
         System.out.println(String.format("Time cost1 : %s ms", System.currentTimeMillis() - start));
     }
 }

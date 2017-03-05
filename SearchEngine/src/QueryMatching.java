@@ -9,13 +9,15 @@ import java.util.stream.Stream;
  */
 public class QueryMatching {
     private final static String QUERY_STRING = "modego professor";
-    private final static double TITLE_WEIGHT = 0.7;
-    private final static double CONTEXT_WEIGHT = 0.3;
+    private final static double TITLE_WEIGHT = 0.6;
+    private final static double CONTEXT_WEIGHT = 0.4;
     private final static int TITLE_LINES = 12389;
     private final static int CONTEXT_LINES = 489669;
     private static final Comparator<Map.Entry<String, Double>> BY_VALUE = new QueryMatching.ByValue();
     private final static Tokenization tokenizer = new Tokenization();
     private final static HashMap<String, String> urlMap = new HashMap<String, String>();
+
+    private HashMap<String, Double> finalResult = new HashMap<>();
 
     public QueryMatching() {
         String mapAddr = "H:\\WebRAW\\WEBPAGES_RAW\\bookkeeping.tsv";
@@ -38,8 +40,20 @@ public class QueryMatching {
     public void search(String queryString) {
         ArrayList<Map.Entry<String, Double>> titleScoreList = this.getTitleScoreList(queryString);
         ArrayList<Map.Entry<String, Double>> cxtScoreList = this.getContextScore(queryString);
+        for(Map.Entry<String, Double> e : titleScoreList)
+            finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue());
 
+        for(Map.Entry<String, Double> e : cxtScoreList)
+            finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue());
 
+        ArrayList<Map.Entry<String, Double>> sortedResult = sortByValueOrder(finalResult);
+
+        FileWriterWBuffer fw = new FileWriterWBuffer(".\\SearchEngine\\testResult.txt", false);
+        for (Map.Entry<String, Double> e: sortedResult) {
+            String writeLine = urlMap.get(e.getKey()) + ", " + e.getValue();
+            fw.writeLine(writeLine);
+        }
+        fw.close();
     }
 
     private ArrayList<Map.Entry<String, Double>> getTitleScoreList(String queryString) {
@@ -143,7 +157,7 @@ public class QueryMatching {
     public static void main (String arg[]){
         long start = System.currentTimeMillis();
         QueryMatching testObj = new QueryMatching();
-        testObj.search("software engineering")
+        testObj.search("software engineering");
         //testObj.getContextScore("software engineering");
         //testObj.getTitleScore("software engineering");
         System.out.println(String.format("Time cost1 : %s ms", System.currentTimeMillis() - start));

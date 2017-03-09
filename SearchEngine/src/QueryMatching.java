@@ -1,3 +1,5 @@
+import com.sun.scenario.effect.impl.sw.sse.SSEBlend_SRC_OUTPeer;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -9,8 +11,8 @@ import java.util.stream.Stream;
  */
 public class QueryMatching {
     private final static String QUERY_STRING = "modego professor";
-    private final static double TITLE_WEIGHT = 0.6;
-    private final static double CONTEXT_WEIGHT = 0.4;
+    private final static double TITLE_WEIGHT = 0.7;
+    private final static double CONTEXT_WEIGHT = 0.3;
     private final static int TITLE_LINES = 12389;
     private final static int CONTEXT_LINES = 489669;
     private static final Comparator<Map.Entry<String, Double>> BY_VALUE = new QueryMatching.ByValue();
@@ -40,20 +42,21 @@ public class QueryMatching {
     public void search(String queryString) {
         ArrayList<Map.Entry<String, Double>> titleScoreList = this.getTitleScoreList(queryString);
         ArrayList<Map.Entry<String, Double>> cxtScoreList = this.getContextScore(queryString);
+
         for(Map.Entry<String, Double> e : titleScoreList)
             finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue());
 
         for(Map.Entry<String, Double> e : cxtScoreList)
             finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue());
 
-        ArrayList<Map.Entry<String, Double>> sortedResult = sortByValueOrder(finalResult);
+        ArrayList<Map.Entry<String, Double>> resultList = sortByValueOrder(finalResult);
 
-        FileWriterWBuffer fw = new FileWriterWBuffer(".\\SearchEngine\\testResult.txt", false);
-        for (Map.Entry<String, Double> e: sortedResult) {
-            String writeLine = urlMap.get(e.getKey()) + ", " + e.getValue();
-            fw.writeLine(writeLine);
-        }
-        fw.close();
+//        FileWriterWBuffer fw = new FileWriterWBuffer(".\\SearchEngine\\testResult.txt", false);
+//        for (Map.Entry<String, Double> e: resultList) {
+//            String writeLine = urlMap.get(e.getKey()) + ", " + e.getValue();
+//            fw.writeLine(writeLine);
+//        }
+//        fw.close();
     }
 
     private ArrayList<Map.Entry<String, Double>> getTitleScoreList(String queryString) {
@@ -81,10 +84,11 @@ public class QueryMatching {
 
     private ArrayList<Map.Entry<String, Double>> calScoreForDoc(String queryString, String filepath, int numOfLine, double weight) {
         List<String> queryTokens = tokenizer.getTokensFromString(queryString, "[^a-zA-Z0-9/]+");
-        TreeMap<String, Double> resultDocMap = new TreeMap<String, Double>();
+        HashMap<String, Double> resultDocMap = new HashMap<String, Double>();
 
         for (String queryTerm: queryTokens) {
-            String foundResult = binarySearchLine(filepath, queryTerm, 1, numOfLine);
+//            String foundResult = binarySearchLine(filepath, queryTerm, 1, numOfLine);
+            String foundResult = simpleSearchLine(filepath, queryTerm);
             if (foundResult == null)
                 System.out.println("Didn't find line");
             else {                                              // found the queryTerm in our index
@@ -102,6 +106,38 @@ public class QueryMatching {
 
         ArrayList<Map.Entry<String, Double>> sortedResult = sortByValueOrder(resultDocMap);
         return sortedResult;
+    }
+
+    private String simpleSearchLine(String filepath, String queryTerm) {
+        List<String> tokenList;
+        FileReaderWBuffer fr = new FileReaderWBuffer(filepath);
+        String line;
+
+        while ( (line = fr.readLine()) != null ) {
+            tokenList = tokenizer.getTokensFromString(line, "[^a-zA-Z0-9/.]+");
+            if (queryTerm.equals(tokenList.get(0))) {
+                return line;
+            }
+        }
+        return null;
+    }
+
+    private String hashMapSearchLine(String filepath, List<String> queryTokens) {
+        List<String> tokenList;
+        HashMap<String, String> indexMap = new HashMap<>();
+        HashSet<String> querySet = new HashSet<>();
+        FileReaderWBuffer fr = new FileReaderWBuffer(filepath);
+        String line;
+
+        for (String queryTerm: queryTokens) {
+            querySet.add(queryTerm);
+        }
+
+        while ( (line = fr.readLine()) != null ) {
+            tokenList = tokenizer.getTokensFromString(line, "[^a-zA-Z0-9/.]+");
+
+        }
+        return null;
     }
 
     private String binarySearchLine(String filepath, String queryTerm, int firstLineNum, int lastLineNum) {
@@ -157,7 +193,8 @@ public class QueryMatching {
     public static void main (String arg[]){
         long start = System.currentTimeMillis();
         QueryMatching testObj = new QueryMatching();
-        testObj.search("software engineering");
+        GetFileLineOffset getOffsetObj = new GetFileLineOffset(arg[0] + ".txt", arg[0] + "Offset.txt");
+        //testObj.search("software engineering");
         //testObj.getContextScore("software engineering");
         //testObj.getTitleScore("software engineering");
         System.out.println(String.format("Time cost1 : %s ms", System.currentTimeMillis() - start));

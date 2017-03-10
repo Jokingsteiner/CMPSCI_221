@@ -14,14 +14,15 @@ public class GetFileLineOffset {
     public void generateOffset(){
         FileReaderWBuffer fr = new FileReaderWBuffer(this.filePath);
         FileWriterWBuffer fw = new FileWriterWBuffer(this.outputPath, false);
-        int offset = 0;
+        long offset = 0;
         StringBuilder sb = new StringBuilder();
-        sb.append(Integer.toString(offset)+ " ");
+        sb.append(Long.toString(offset)+ " ");
 
         String line;
         while ( (line = fr.readLine()) != null) {
-            offset += line.length();
-            sb.append(Integer.toString(offset)+ " ");
+            offset = offset + line.length() + "\n".length();
+            // TODO: change the 6 bytes "\n" + " "?? to 4 bytes or less in different system
+            sb.append(Long.toString(offset)+ " ");
         }
         fw.writeLine(sb.toString());
         fr.close();

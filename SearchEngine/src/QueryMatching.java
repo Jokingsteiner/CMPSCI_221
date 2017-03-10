@@ -1,6 +1,9 @@
 import com.sun.scenario.effect.impl.sw.sse.SSEBlend_SRC_OUTPeer;
 
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -20,6 +23,8 @@ public class QueryMatching {
     private final static HashMap<String, String> urlMap = new HashMap<String, String>();
 
     private HashMap<String, Double> finalResult = new HashMap<>();
+    private RandomAccessFile raf;
+    private HashMap<Integer, Integer> lineMap;
 
     public QueryMatching() {
         String mapAddr = "H:\\WebRAW\\WEBPAGES_RAW\\bookkeeping.tsv";
@@ -51,12 +56,13 @@ public class QueryMatching {
 
         ArrayList<Map.Entry<String, Double>> resultList = sortByValueOrder(finalResult);
 
-//        FileWriterWBuffer fw = new FileWriterWBuffer(".\\SearchEngine\\testResult.txt", false);
-//        for (Map.Entry<String, Double> e: resultList) {
-//            String writeLine = urlMap.get(e.getKey()) + ", " + e.getValue();
-//            fw.writeLine(writeLine);
-//        }
-//        fw.close();
+        //TODO: uncomment this to write result into a file
+        FileWriterWBuffer fw = new FileWriterWBuffer(".\\SearchEngine\\top100Results.txt", false);
+        for (int i = 0; i < 100; i++) {
+            String writeLine = urlMap.get(resultList.get(i).getKey()) + ", " + resultList.get(i).getValue();
+            fw.writeLine(writeLine);
+        }
+        fw.close();
     }
 
     private ArrayList<Map.Entry<String, Double>> getTitleScoreList(String queryString) {
@@ -87,10 +93,21 @@ public class QueryMatching {
         HashMap<String, Double> resultDocMap = new HashMap<String, Double>();
 
         for (String queryTerm: queryTokens) {
-//            String foundResult = binarySearchLine(filepath, queryTerm, 1, numOfLine);
-            String foundResult = simpleSearchLine(filepath, queryTerm);
+            try {
+                raf = new RandomAccessFile(filepath, "r");
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+            lineMap = readOffsetFile(filepath.replace(".txt", "") + "Offset.txt");
+            String foundResult = binarySearchLine(filepath, queryTerm, 1, numOfLine);
+            try {
+                raf.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+//            String foundResult = simpleSearchLine(filepath, queryTerm);
             if (foundResult == null)
-                System.out.println("Didn't find line");
+                System.out.println("Didn't find line with \"" + queryTerm + "\"");
             else {                                              // found the queryTerm in our index
                 //System.out.println("Found: " + foundResult);
                 List<String> tokenList = tokenizer.getTokensFromString(foundResult, "[^a-zA-Z0-9/.]+");
@@ -122,28 +139,12 @@ public class QueryMatching {
         return null;
     }
 
-    private String hashMapSearchLine(String filepath, List<String> queryTokens) {
-        List<String> tokenList;
-        HashMap<String, String> indexMap = new HashMap<>();
-        HashSet<String> querySet = new HashSet<>();
-        FileReaderWBuffer fr = new FileReaderWBuffer(filepath);
-        String line;
-
-        for (String queryTerm: queryTokens) {
-            querySet.add(queryTerm);
-        }
-
-        while ( (line = fr.readLine()) != null ) {
-            tokenList = tokenizer.getTokensFromString(line, "[^a-zA-Z0-9/.]+");
-
-        }
-        return null;
-    }
-
+    // line number starts from 1!!!!!
     private String binarySearchLine(String filepath, String queryTerm, int firstLineNum, int lastLineNum) {
         int cmpLineNum = (firstLineNum + lastLineNum) / 2;
-        Stream<String> lines = getLinesStream(filepath);
-        String cmpLine = lines.skip(cmpLineNum - 1).findFirst().get();
+//        Stream<String> lines = getLinesStream(filepath);
+//        String cmpLine = lines.skip(cmpLineNum - 1).findFirst().get();
+        String cmpLine = randomAccessLine(lineMap.get(cmpLineNum - 1));
         List<String> tokenList = tokenizer.getTokensFromString(cmpLine, "[^a-zA-Z0-9/.]+");
         String cmpTerm = tokenList.get(0);
 
@@ -164,7 +165,29 @@ public class QueryMatching {
         }
     }
 
-    public Stream<String> getLinesStream(String filepath) {
+    private String randomAccessLine(int startBytes) {
+        try {
+            raf.seek(startBytes);
+            return raf.readLine();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private HashMap<Integer, Integer> readOffsetFile (String filePath) {
+        HashMap<Integer, Integer> lineMap = new HashMap<>();
+        FileReaderWBuffer fr = new FileReaderWBuffer(filePath);
+        List<String> tokens = tokenizer.getTokensFromFile(filePath);
+        for (int i = 0; i < tokens.size(); i++)
+            lineMap.put(i, Integer.valueOf(tokens.get(i)));
+        fr.close();
+        return lineMap;
+    }
+
+    private Stream<String> getLinesStream(String filepath) {
         String line;
         Stream<String> lines = null;
         try {
@@ -193,11 +216,17 @@ public class QueryMatching {
     public static void main (String arg[]){
         long start = System.currentTimeMillis();
         QueryMatching testObj = new QueryMatching();
-        GetFileLineOffset getOffsetObj = new GetFileLineOffset(arg[0] + ".txt", arg[0] + "Offset.txt");
-        //testObj.search("software engineering");
-        //testObj.getContextScore("software engineering");
-        //testObj.getTitleScore("software engineering");
-        System.out.println(String.format("Time cost1 : %s ms", System.currentTimeMillis() - start));
+        ArrayList<String> fileList = new ArrayList<String>();
+        fileList.add(".\\SearchEngine\\resources\\titleIndex\\title_tfidfWeight.txt");
+        fileList.add(".\\SearchEngine\\resources\\contextIndex\\context_tfidfWeight.txt");
+//        for (String s: fileList)
+//            new GetFileLineOffset(s, s.replace(".txt", "") + "Offset.txt");
+
+        testObj.search("software engineering");
+//
+//        HashMap<Integer, Integer> lineMap = testObj.readOffsetFile(fileList.get(0).replace(".txt", "") + "Offset.txt");
+//        System.out.println(testObj.randomAccessLine(fileList.get(0), lineMap.get(10 - 1)));
+        System.out.println(String.format("Time cost : %s ms", System.currentTimeMillis() - start));
     }
 
 }

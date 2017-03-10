@@ -2,6 +2,7 @@ import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 
 /**
  * Created by cjk98 on 1/21/2017.
@@ -40,6 +41,22 @@ public class FileReaderWBuffer {
             return br.readLine();
         } catch (IOException e) {
             System.out.println("readline() fail for BufferedReader!");
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    // read a line
+    public ArrayList<String> readAll() {
+        try {
+            String line;
+            ArrayList<String> result = new ArrayList<>();
+            while ( (line = br.readLine()) != null) {
+                result.add(line);
+            }
+            return result;
+        } catch (IOException e) {
+            System.out.println("readAll() fail for BufferedReader!");
             e.printStackTrace();
         }
         return null;

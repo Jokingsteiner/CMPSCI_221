@@ -9,15 +9,17 @@ import java.util.*;
  * Created by cjk98 on 3/4/2017.
  */
 public class QueryMatching {
-    private final static String QUERY_STRING = "software engineering";
-    private final static double ANCHOR_WEIGHT = 0.3;
+    private final static String QUERY_STRING = "information retrieval";
+    private final static double ANCHOR_WEIGHT = 0.5;
     private final static double TITLE_WEIGHT = 0.8;
     private final static double HEADER_WEIGHT = 0.1;
     private final static double CONTEXT_WEIGHT = 0.4;
+    private final static double URL_WEIGHT = 0.6;
     private final static int ANCHOR_LINES = 83564;
     private final static int TITLE_LINES = 12488;
     private final static int HEADER_LINES = 21770;
     private final static int CONTEXT_LINES = 488274;
+    private final static int URL_LINES = 18030;
     private final static Comparator<Map.Entry<String, Double>> BY_VALUE = new QueryMatching.ByValue();
     private final static Tokenization tokenizer = new Tokenization();
     private final static HashMap<String, String> urlMap = new HashMap<>();
@@ -61,12 +63,13 @@ public class QueryMatching {
         filepathMap.put("title", ".\\SearchEngine\\resources\\titleIndex\\title_tfidfWeight.txt");
         filepathMap.put("header", ".\\SearchEngine\\resources\\headerIndex\\header_tfidfWeight.txt");
         filepathMap.put("context", ".\\SearchEngine\\resources\\contextIndex\\context_tfidfWeight.txt");
+        filepathMap.put("url", ".\\SearchEngine\\resources\\urlIndex\\url_tfidfWeight.txt");
 //        for (Map.Entry<String,String> e : urlMap.entrySet())
 //            System.out.println(e.getKey() + " " + e.getValue());
         fr.close();
     }
 
-    public void search(String queryString) {
+    public ArrayList<String> search(String queryString) {
         long startTime;
         int count;
 
@@ -84,7 +87,7 @@ public class QueryMatching {
             finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * titleResult.factor);
         count = 0;
         for(Map.Entry<String, Double> e : titleResult.resultMap.entrySet()) {
-            if (count++ < 30 && e != null)
+//            if (count++ < 30 && e != null)
                 System.out.println(e.getKey() + "     " + e.getValue());
         }
         System.out.println(String.format("Search by Title Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
@@ -95,21 +98,32 @@ public class QueryMatching {
             finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * headerResult.factor);
         count = 0;
         for(Map.Entry<String, Double> e : headerResult.resultMap.entrySet()) {
-            if (count++ < 30 && e != null)
+//            if (count++ < 30 && e != null)
                 System.out.println(e.getKey() + "     " + e.getValue());
         }
         System.out.println(String.format("Search by Header Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
 
         startTime = System.currentTimeMillis();
-        ResultNode contextResultMap = calScoreForDoc(queryString, filepathMap.get("context"), CONTEXT_LINES, CONTEXT_WEIGHT);
-        for(Map.Entry<String, Double> e : contextResultMap.resultMap.entrySet())
-            finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * contextResultMap.factor);
+        ResultNode contextResult = calScoreForDoc(queryString, filepathMap.get("context"), CONTEXT_LINES, CONTEXT_WEIGHT);
+        for(Map.Entry<String, Double> e : contextResult.resultMap.entrySet())
+            finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * contextResult.factor);
         count = 0;
-        for(Map.Entry<String, Double> e : contextResultMap.resultMap.entrySet()) {
-            if (count++ < 30 && e != null)
+        for(Map.Entry<String, Double> e : contextResult.resultMap.entrySet()) {
+//            if (count++ < 30 && e != null)
                 System.out.println(e.getKey() + "     " + e.getValue());
         }
         System.out.println(String.format("Search by Context Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
+
+        startTime = System.currentTimeMillis();
+        ResultNode urlResult = calScoreForDoc(queryString, filepathMap.get("url"), URL_LINES, URL_WEIGHT);
+        for(Map.Entry<String, Double> e : urlResult.resultMap.entrySet())
+            finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * urlResult.factor);
+        count = 0;
+        for(Map.Entry<String, Double> e : urlResult.resultMap.entrySet()) {
+//            if (count++ < 30 && e != null)
+            System.out.println(e.getKey() + "     " + e.getValue());
+        }
+        System.out.println(String.format("Search by URL Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
 
         ArrayList<Map.Entry<String, Double>> resultList = sortByValueOrder(finalResult);
 
@@ -120,6 +134,7 @@ public class QueryMatching {
             fw.writeLine(writeLine);
         }
         fw.close();
+        return getTopResults(finalResult, 10);
     }
 
 /*    private ArrayList<Map.Entry<String, Double>> getTitleScoreList(String queryString) {
@@ -171,6 +186,8 @@ public class QueryMatching {
                 }
             }
         }
+
+        System.out.println("Max Score is " + maxScore);
         return new ResultNode(resultDocMap, maxScore, matchNum);
     }
 
@@ -269,6 +286,15 @@ public class QueryMatching {
         ArrayList<Map.Entry<String, Double>> sortList = new ArrayList<>(resultMap.entrySet());
         sortList.sort(BY_VALUE);
         return sortList;
+    }
+
+    private ArrayList<String> getTopResults(Map<String, Double> resultMap, int topNum) {
+        ArrayList<String> result = new ArrayList<>();
+        ArrayList<Map.Entry<String, Double>> sortList = new ArrayList<>(resultMap.entrySet());
+        sortList.sort(BY_VALUE);
+        for (int i = 0; i < Math.min(topNum, sortList.size()); i++)
+            result.add(urlMap.get(sortList.get(i).getKey()));
+        return result;
     }
 
     public void offsetHelper() {

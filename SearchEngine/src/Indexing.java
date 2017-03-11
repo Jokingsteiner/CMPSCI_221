@@ -144,12 +144,18 @@ public class Indexing {
         String headerDF = ".\\SearchEngine\\resources\\headerIndex\\hdf.txt";
         String headerTfIdf = ".\\SearchEngine\\resources\\headerIndex\\header_tfidfWeight.txt";
 
+        // urlIndex
+        String urlTF = ".\\SearchEngine\\resources\\urlIndex\\sorturltf.txt";
+        String urlDF = ".\\SearchEngine\\resources\\urlIndex\\urldf.txt";
+        String urlTfIdf = ".\\SearchEngine\\resources\\urlIndex\\url_tfidfWeight.txt";
+
 
         Indexing testIndexer = new Indexing();
 //        testIndexer.buildIndex();
-        testIndexer.buildTFIDF(titleTF, titleDF, titleTfIdf);
-        testIndexer.buildTFIDF(contextTF, contextDF, contextTfIdf);
-        testIndexer.buildTFIDF(headerTF, headerDF, headerTfIdf);
+//        testIndexer.buildTFIDF(titleTF, titleDF, titleTfIdf);
+//        testIndexer.buildTFIDF(contextTF, contextDF, contextTfIdf);
+//        testIndexer.buildTFIDF(headerTF, headerDF, headerTfIdf);
+        testIndexer.buildTFIDF(urlTF, urlDF, urlTfIdf);
 
         System.out.println(String.format("Time cost1 : %s ms", System.currentTimeMillis() - start));
     }

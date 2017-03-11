@@ -1,30 +1,47 @@
-import com.sun.scenario.effect.impl.sw.sse.SSEBlend_SRC_OUTPeer;
-
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
-import java.util.stream.Stream;
 
 /**
  * Created by cjk98 on 3/4/2017.
  */
 public class QueryMatching {
-    private final static String QUERY_STRING = "modego professor";
-    private final static double TITLE_WEIGHT = 0.7;
-    private final static double CONTEXT_WEIGHT = 0.3;
-    private final static int TITLE_LINES = 12389;
-    private final static int CONTEXT_LINES = 489669;
-    private static final Comparator<Map.Entry<String, Double>> BY_VALUE = new QueryMatching.ByValue();
+    private final static String QUERY_STRING = "software engineering";
+    private final static double ANCHOR_WEIGHT = 0.3;
+    private final static double TITLE_WEIGHT = 0.8;
+    private final static double HEADER_WEIGHT = 0.1;
+    private final static double CONTEXT_WEIGHT = 0.4;
+    private final static int ANCHOR_LINES = 83564;
+    private final static int TITLE_LINES = 12488;
+    private final static int HEADER_LINES = 21770;
+    private final static int CONTEXT_LINES = 488274;
+    private final static Comparator<Map.Entry<String, Double>> BY_VALUE = new QueryMatching.ByValue();
     private final static Tokenization tokenizer = new Tokenization();
-    private final static HashMap<String, String> urlMap = new HashMap<String, String>();
+    private final static HashMap<String, String> urlMap = new HashMap<>();
+
+    private static HashMap<String, String> filepathMap = new HashMap<>();
 
     private HashMap<String, Double> finalResult = new HashMap<>();
     private RandomAccessFile raf;
+    /** line number starts from 1 !!! */
     private HashMap<Integer, Integer> lineMap;
+
+    private class ResultNode {
+        public HashMap<String, Double> resultMap;
+        private double maxScore;
+        private int matchNumber;
+        public double factor;
+
+        public ResultNode(HashMap<String, Double> resultMap, double maxScore, int matchNumber) {
+            this.resultMap = resultMap;
+            this.maxScore = maxScore;
+            this.matchNumber = matchNumber;
+            this.factor = this.matchNumber / this.maxScore;
+        }
+    }
 
     public QueryMatching() {
         String mapAddr = "H:\\WebRAW\\WEBPAGES_RAW\\bookkeeping.tsv";
@@ -39,59 +56,89 @@ public class QueryMatching {
             }
             urlMap.put(tokenList.get(0), tokenList.get(1));
         }
+
+        filepathMap.put("anchor", ".\\SearchEngine\\resources\\anchorIndex\\anchorScore.txt");
+        filepathMap.put("title", ".\\SearchEngine\\resources\\titleIndex\\title_tfidfWeight.txt");
+        filepathMap.put("header", ".\\SearchEngine\\resources\\headerIndex\\header_tfidfWeight.txt");
+        filepathMap.put("context", ".\\SearchEngine\\resources\\contextIndex\\context_tfidfWeight.txt");
 //        for (Map.Entry<String,String> e : urlMap.entrySet())
 //            System.out.println(e.getKey() + " " + e.getValue());
         fr.close();
     }
 
     public void search(String queryString) {
-        ArrayList<Map.Entry<String, Double>> titleScoreList = this.getTitleScoreList(queryString);
-        ArrayList<Map.Entry<String, Double>> cxtScoreList = this.getContextScore(queryString);
+        long startTime;
+        int count;
 
-        for(Map.Entry<String, Double> e : titleScoreList)
-            finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue());
+        startTime = System.currentTimeMillis();
+        ResultNode anchorResult = calScoreForDoc(queryString, filepathMap.get("anchor"), ANCHOR_LINES, ANCHOR_WEIGHT);
+        for(Map.Entry<String, Double> e : anchorResult.resultMap.entrySet())
+            finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * anchorResult.factor);
+        for(Map.Entry<String, Double> e : anchorResult.resultMap.entrySet())
+            System.out.println(e.getKey() + "     " + e.getValue());
+        System.out.println(String.format("Search by AnchorText Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
 
-        for(Map.Entry<String, Double> e : cxtScoreList)
-            finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue());
+        startTime = System.currentTimeMillis();
+        ResultNode titleResult = calScoreForDoc(queryString, filepathMap.get("title"), TITLE_LINES, TITLE_WEIGHT);
+        for(Map.Entry<String, Double> e : titleResult.resultMap.entrySet())
+            finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * titleResult.factor);
+        count = 0;
+        for(Map.Entry<String, Double> e : titleResult.resultMap.entrySet()) {
+            if (count++ < 30 && e != null)
+                System.out.println(e.getKey() + "     " + e.getValue());
+        }
+        System.out.println(String.format("Search by Title Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
+
+        startTime = System.currentTimeMillis();
+        ResultNode headerResult = calScoreForDoc(queryString, filepathMap.get("header"), HEADER_LINES, HEADER_WEIGHT);
+        for(Map.Entry<String, Double> e : headerResult.resultMap.entrySet())
+            finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * headerResult.factor);
+        count = 0;
+        for(Map.Entry<String, Double> e : headerResult.resultMap.entrySet()) {
+            if (count++ < 30 && e != null)
+                System.out.println(e.getKey() + "     " + e.getValue());
+        }
+        System.out.println(String.format("Search by Header Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
+
+        startTime = System.currentTimeMillis();
+        ResultNode contextResultMap = calScoreForDoc(queryString, filepathMap.get("context"), CONTEXT_LINES, CONTEXT_WEIGHT);
+        for(Map.Entry<String, Double> e : contextResultMap.resultMap.entrySet())
+            finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * contextResultMap.factor);
+        count = 0;
+        for(Map.Entry<String, Double> e : contextResultMap.resultMap.entrySet()) {
+            if (count++ < 30 && e != null)
+                System.out.println(e.getKey() + "     " + e.getValue());
+        }
+        System.out.println(String.format("Search by Context Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
 
         ArrayList<Map.Entry<String, Double>> resultList = sortByValueOrder(finalResult);
 
         //TODO: uncomment this to write result into a file
         FileWriterWBuffer fw = new FileWriterWBuffer(".\\SearchEngine\\top100Results.txt", false);
-        for (int i = 0; i < 100; i++) {
-            String writeLine = urlMap.get(resultList.get(i).getKey()) + ", " + resultList.get(i).getValue();
+        for (int i = 0; i < Math.min(100, resultList.size()); i++) {
+            String writeLine = resultList.get(i).getKey() + " " + urlMap.get(resultList.get(i).getKey());
             fw.writeLine(writeLine);
         }
         fw.close();
     }
 
-    private ArrayList<Map.Entry<String, Double>> getTitleScoreList(String queryString) {
+/*    private ArrayList<Map.Entry<String, Double>> getTitleScoreList(String queryString) {
         String filepath = ".\\SearchEngine\\resources\\titleIndex\\title_tfidfWeight.txt";
         ArrayList<Map.Entry<String, Double>> matchResult = calScoreForDoc(queryString.toLowerCase(), filepath, TITLE_LINES, TITLE_WEIGHT);
-//        for (int i = 0; i < 20; i ++)
-//            System.out.println(matchResult.get(i).getKey() + ", " + matchResult.get(i).getValue());
         return matchResult;
     }
 
     private ArrayList<Map.Entry<String, Double>> getContextScore(String queryString) {
         String filepath = ".\\SearchEngine\\resources\\contextIndex\\context_tfidfWeight.txt";
         ArrayList<Map.Entry<String, Double>> matchResult = calScoreForDoc(queryString.toLowerCase(), filepath, CONTEXT_LINES, CONTEXT_WEIGHT);
-//        FileWriterWBuffer fw = new FileWriterWBuffer(".\\SearchEngine\\testResult.txt", false);
-//        for (Map.Entry<String, Double> e: matchResult) {
-//            String writeLine = urlMap.get(e.getKey()) + ", " + e.getValue();
-//            System.out.println(writeLine);
-//            fw.writeLine(writeLine);
-//        }
-////        for (int i = 0; i < 20; i ++)
-////            System.out.println(urlMap.get(matchResult.get(i).getKey()) + ", " + matchResult.get(i).getValue());
-//        fw.close();
         return matchResult;
-    }
+    }*/
 
-    private ArrayList<Map.Entry<String, Double>> calScoreForDoc(String queryString, String filepath, int numOfLine, double weight) {
-        List<String> queryTokens = tokenizer.getTokensFromString(queryString, "[^a-zA-Z0-9/]+");
+    private ResultNode calScoreForDoc(String queryString, String filepath, int numOfLine, double weight) {
+        List<String> queryTokens = tokenizer.getTokensFromString(queryString.toLowerCase(), "[^a-zA-Z0-9/]+");
         HashMap<String, Double> resultDocMap = new HashMap<String, Double>();
-
+        double maxScore = Double.MIN_VALUE;
+        int matchNum = 0;
         for (String queryTerm: queryTokens) {
             try {
                 raf = new RandomAccessFile(filepath, "r");
@@ -108,21 +155,23 @@ public class QueryMatching {
 //            String foundResult = simpleSearchLine(filepath, queryTerm);
             if (foundResult == null)
                 System.out.println("Didn't find line with \"" + queryTerm + "\"");
-            else {                                              // found the queryTerm in our index
+            else {
+                // found the queryTerm in our index
                 //System.out.println("Found: " + foundResult);
+                matchNum++;
                 List<String> tokenList = tokenizer.getTokensFromString(foundResult, "[^a-zA-Z0-9/.]+");
 
                 for (int i = 1; i < tokenList.size(); i+= 2) {
                 double score = Double.valueOf(tokenList.get(i));
+                if (score > maxScore)
+                    maxScore = score;
                 // find all docID that this term is in
                 String docID = tokenList.get(i + 1);
                 resultDocMap.put(docID, resultDocMap.getOrDefault(docID, 0.0) + score * weight);
                 }
             }
         }
-
-        ArrayList<Map.Entry<String, Double>> sortedResult = sortByValueOrder(resultDocMap);
-        return sortedResult;
+        return new ResultNode(resultDocMap, maxScore, matchNum);
     }
 
     private String simpleSearchLine(String filepath, String queryTerm) {
@@ -144,7 +193,7 @@ public class QueryMatching {
         int cmpLineNum = (firstLineNum + lastLineNum) / 2;
 //        Stream<String> lines = getLinesStream(filepath);
 //        String cmpLine = lines.skip(cmpLineNum - 1).findFirst().get();
-        String cmpLine = randomAccessLine(lineMap.get(cmpLineNum - 1));
+        String cmpLine = randomAccessLine(lineMap.get(cmpLineNum));
         List<String> tokenList = tokenizer.getTokensFromString(cmpLine, "[^a-zA-Z0-9/.]+");
         String cmpTerm = tokenList.get(0);
 
@@ -177,28 +226,37 @@ public class QueryMatching {
         return null;
     }
 
+    //TODO: remove me
+    public String testRandomAccess(String filepath, int startBytes) {
+        try {
+            raf = new RandomAccessFile(filepath, "r");
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        String line = randomAccessLine(startBytes);
+        try {
+            raf.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return line;
+    }
+
+    /**
+     * line number starts from 1!
+     * @param filePath
+     * @return
+     */
+
     private HashMap<Integer, Integer> readOffsetFile (String filePath) {
         HashMap<Integer, Integer> lineMap = new HashMap<>();
         FileReaderWBuffer fr = new FileReaderWBuffer(filePath);
         List<String> tokens = tokenizer.getTokensFromFile(filePath);
         for (int i = 0; i < tokens.size(); i++)
-            lineMap.put(i, Integer.valueOf(tokens.get(i)));
+            lineMap.put(i + 1, Integer.valueOf(tokens.get(i)));
         fr.close();
         return lineMap;
     }
-
-    private Stream<String> getLinesStream(String filepath) {
-        String line;
-        Stream<String> lines = null;
-        try {
-            lines = Files.lines(Paths.get(filepath));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return lines;
-    }
-
 
     private static class ByValue implements Comparator<Map.Entry<String, Double>> {
         @Override
@@ -207,26 +265,35 @@ public class QueryMatching {
         }
     }
 
-    private ArrayList<Map.Entry<String, Double>>  sortByValueOrder(Map<String, Double> resultMap) {
+    private ArrayList<Map.Entry<String, Double>> sortByValueOrder(Map<String, Double> resultMap) {
         ArrayList<Map.Entry<String, Double>> sortList = new ArrayList<>(resultMap.entrySet());
         sortList.sort(BY_VALUE);
         return sortList;
     }
 
+    public void offsetHelper() {
+//        ArrayList<String> fileList = new ArrayList<String>();
+//        fileList.add(".\\SearchEngine\\resources\\anchorIndex\\anchorScore.txt");
+//        fileList.add(".\\SearchEngine\\resources\\titleIndex\\title_tfidfWeight.txt");
+//        fileList.add(".\\SearchEngine\\resources\\headerIndex\\header_tfidfWeight.txt");
+//        fileList.add(".\\SearchEngine\\resources\\contextIndex\\context_tfidfWeight.txt");
+        for (Map.Entry<String, String> e: filepathMap.entrySet()) {
+            String filepath = e.getValue();
+            new GetFileLineOffset(filepath, filepath.replace(".txt", "") + "Offset.txt");
+        }
+
+
+    }
+
     public static void main (String arg[]){
         long start = System.currentTimeMillis();
         QueryMatching testObj = new QueryMatching();
-        ArrayList<String> fileList = new ArrayList<String>();
-        fileList.add(".\\SearchEngine\\resources\\titleIndex\\title_tfidfWeight.txt");
-        fileList.add(".\\SearchEngine\\resources\\contextIndex\\context_tfidfWeight.txt");
-//        for (String s: fileList)
-//            new GetFileLineOffset(s, s.replace(".txt", "") + "Offset.txt");
+        testObj.search(QUERY_STRING);
+//        testObj.offsetHelper();
 
-        testObj.search("software engineering");
-//
-//        HashMap<Integer, Integer> lineMap = testObj.readOffsetFile(fileList.get(0).replace(".txt", "") + "Offset.txt");
-//        System.out.println(testObj.randomAccessLine(fileList.get(0), lineMap.get(10 - 1)));
-        System.out.println(String.format("Time cost : %s ms", System.currentTimeMillis() - start));
+//        HashMap<Integer, Integer> lineMap = testObj.readOffsetFile(filepathMap.get("title").replace(".txt", "") + "Offset.txt");
+//        System.out.println(testObj.testRandomAccess(filepathMap.get("title"), lineMap.get(10)));
+        System.out.println(String.format("Total Time cost : %s ms", System.currentTimeMillis() - start));
     }
 
 }

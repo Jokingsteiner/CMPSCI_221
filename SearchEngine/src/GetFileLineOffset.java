@@ -20,7 +20,7 @@ public class GetFileLineOffset {
 
         String line;
         while ( (line = fr.readLine()) != null) {
-            offset = offset + line.length() + "\n".length();
+            offset = offset + line.length() + "\n".length() + 1;
             // TODO: change the 6 bytes "\n" + " "?? to 4 bytes or less in different system
             sb.append(Long.toString(offset)+ " ");
         }

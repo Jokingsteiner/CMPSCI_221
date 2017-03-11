@@ -131,16 +131,26 @@ public class Indexing {
 
     public static void main (String arg[]){
         long start = System.currentTimeMillis();
-        String titleTF = ".\\\\SearchEngine\\\\resources\\\\titleIndex\\\\sorttf.txt";
-        String titleDF = ".\\\\SearchEngine\\\\resources\\\\titleIndex\\\\indexdf.txt";
-        String titleTfIdf = ".\\\\SearchEngine\\\\resources\\\\titleIndex\\\\title_tfidfWeight.txt";
-        String contextTF = ".\\\\SearchEngine\\\\resources\\\\contextIndex\\\\sortptf.txt";
-        String contextDF = ".\\\\SearchEngine\\\\resources\\\\contextIndex\\\\indexpdf.txt";
-        String contextTfIdf = ".\\\\SearchEngine\\\\resources\\\\contextIndex\\\\context_tfidfWeight.txt";
+        // titleIndex
+        String titleTF = ".\\SearchEngine\\resources\\titleIndex\\sortttf.txt";
+        String titleDF = ".\\SearchEngine\\resources\\titleIndex\\tdf.txt";
+        String titleTfIdf = ".\\SearchEngine\\resources\\titleIndex\\title_tfidfWeight.txt";
+        // contextIndex
+        String contextTF = ".\\SearchEngine\\resources\\contextIndex\\sortptf.txt";
+        String contextDF = ".\\SearchEngine\\resources\\contextIndex\\pdf.txt";
+        String contextTfIdf = ".\\SearchEngine\\resources\\contextIndex\\context_tfidfWeight.txt";
+        // headerIndex
+        String headerTF = ".\\SearchEngine\\resources\\headerIndex\\sorthtf.txt";
+        String headerDF = ".\\SearchEngine\\resources\\headerIndex\\hdf.txt";
+        String headerTfIdf = ".\\SearchEngine\\resources\\headerIndex\\header_tfidfWeight.txt";
+
+
         Indexing testIndexer = new Indexing();
 //        testIndexer.buildIndex();
         testIndexer.buildTFIDF(titleTF, titleDF, titleTfIdf);
         testIndexer.buildTFIDF(contextTF, contextDF, contextTfIdf);
+        testIndexer.buildTFIDF(headerTF, headerDF, headerTfIdf);
+
         System.out.println(String.format("Time cost1 : %s ms", System.currentTimeMillis() - start));
     }
 }

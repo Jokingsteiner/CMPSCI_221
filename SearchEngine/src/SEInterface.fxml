@@ -42,5 +42,10 @@
             <TableColumn fx:id="urlColumn" prefWidth="557.0" sortable="false" text="URL" />
          </columns>
       </TableView>
+      <Text fx:id="elapsedTime" layoutX="58.0" layoutY="285.0" strokeType="OUTSIDE" strokeWidth="0.0" wrappingWidth="398.13671875">
+         <font>
+            <Font size="15.0" />
+         </font>
+      </Text>
    </children>
 </AnchorPane>

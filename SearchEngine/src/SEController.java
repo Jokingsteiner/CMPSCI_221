@@ -36,16 +36,18 @@ public class SEController implements Initializable {
     @FXML
     private TableColumn<Integer, String> urlColumn;
     @FXML
-    private ListView resultListView;
+    private Text elapsedTime;
 
     private QueryMatching qmObj;
     private static final ObservableList resultList = FXCollections.observableArrayList();
 
     public void initialize(URL url, ResourceBundle rb) {
-        System.out.println("Initializing");
+        long start = System.currentTimeMillis();
+        System.out.printf("Initializing...");
         qmObj = new QueryMatching();
+        System.out.printf(String.format("%s ms passed", System.currentTimeMillis() - start) + '\n');
         titleBox.setAlignment(Pos.CENTER_RIGHT);
-        seBandName.setText("Search Engine V1.0");
+        seBandName.setText("Search Engine V1.2");
         groupName.setText("IR W17 Grad 48123229, 71169660");
     }
 
@@ -59,6 +61,7 @@ public class SEController implements Initializable {
 
     @FXML
     private void handleSearch(ActionEvent event) {
+        long start = System.currentTimeMillis();
         ArrayList<String> result = qmObj.search(seTextField.getText());
 //        resultList.addAll(result);
 ////        System.out.println(resultList);
@@ -74,6 +77,8 @@ public class SEController implements Initializable {
             Integer rowIndex = cellData.getValue();
             return new ReadOnlyStringWrapper(result.get(rowIndex));
         });
+        String elapsedText = String.format("Total Time cost : %s ms", System.currentTimeMillis() - start);
+        elapsedTime.setText(elapsedText);
     }
 
 }

@@ -25,6 +25,12 @@ public class QueryMatching {
     private final static HashMap<String, String> urlMap = new HashMap<>();
 
     private static HashMap<String, String> filepathMap = new HashMap<>();
+    private static HashMap<String, ArrayList<DocNode>> anchorIndex;
+    private static HashMap<String, ArrayList<DocNode>> titleIndex;
+    private static HashMap<String, ArrayList<DocNode>> headerIndex;
+    private static HashMap<String, ArrayList<DocNode>> contextIndex;
+    private static HashMap<String, ArrayList<DocNode>> urlIndex;
+
 
     private HashMap<String, Double> finalResult = new HashMap<>();
     private RandomAccessFile raf;
@@ -45,6 +51,15 @@ public class QueryMatching {
         }
     }
 
+    private class DocNode {
+        double score;
+        String docID;
+        public DocNode(double score, String docID) {
+            this.score = score;
+            this.docID = docID;
+        }
+    }
+
     public QueryMatching() {
         String mapAddr = "H:\\WebRAW\\WEBPAGES_RAW\\bookkeeping.tsv";
         FileReaderWBuffer fr = new FileReaderWBuffer(mapAddr);
@@ -58,15 +73,17 @@ public class QueryMatching {
             }
             urlMap.put(tokenList.get(0), tokenList.get(1));
         }
-
+        fr.close();
         filepathMap.put("anchor", ".\\SearchEngine\\resources\\anchorIndex\\anchorScore.txt");
         filepathMap.put("title", ".\\SearchEngine\\resources\\titleIndex\\title_tfidfWeight.txt");
         filepathMap.put("header", ".\\SearchEngine\\resources\\headerIndex\\header_tfidfWeight.txt");
         filepathMap.put("context", ".\\SearchEngine\\resources\\contextIndex\\context_tfidfWeight.txt");
         filepathMap.put("url", ".\\SearchEngine\\resources\\urlIndex\\url_tfidfWeight.txt");
-//        for (Map.Entry<String,String> e : urlMap.entrySet())
-//            System.out.println(e.getKey() + " " + e.getValue());
-        fr.close();
+        anchorIndex = readIndex(filepathMap.get("anchor"));
+        titleIndex = readIndex(filepathMap.get("title"));
+        headerIndex = readIndex(filepathMap.get("header"));
+        contextIndex = readIndex(filepathMap.get("context"));
+        urlIndex = readIndex(filepathMap.get("url"));
     }
 
     public ArrayList<String> search(String queryString) {
@@ -74,7 +91,8 @@ public class QueryMatching {
         int count;
 
         startTime = System.currentTimeMillis();
-        ResultNode anchorResult = calScoreForDoc(queryString, filepathMap.get("anchor"), ANCHOR_LINES, ANCHOR_WEIGHT);
+//        ResultNode anchorResult = calScoreForDoc(queryString, filepathMap.get("anchor"), ANCHOR_LINES, ANCHOR_WEIGHT);
+        ResultNode anchorResult = calScoreLocal(queryString, titleIndex, ANCHOR_WEIGHT);
         for(Map.Entry<String, Double> e : anchorResult.resultMap.entrySet())
             finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * anchorResult.factor);
         for(Map.Entry<String, Double> e : anchorResult.resultMap.entrySet())
@@ -82,7 +100,8 @@ public class QueryMatching {
         System.out.println(String.format("Search by AnchorText Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
 
         startTime = System.currentTimeMillis();
-        ResultNode titleResult = calScoreForDoc(queryString, filepathMap.get("title"), TITLE_LINES, TITLE_WEIGHT);
+//        ResultNode titleResult = calScoreForDoc(queryString, filepathMap.get("title"), TITLE_LINES, TITLE_WEIGHT);
+        ResultNode titleResult = calScoreLocal(queryString, titleIndex, TITLE_WEIGHT);
         for(Map.Entry<String, Double> e : titleResult.resultMap.entrySet())
             finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * titleResult.factor);
         count = 0;
@@ -93,7 +112,8 @@ public class QueryMatching {
         System.out.println(String.format("Search by Title Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
 
         startTime = System.currentTimeMillis();
-        ResultNode headerResult = calScoreForDoc(queryString, filepathMap.get("header"), HEADER_LINES, HEADER_WEIGHT);
+//        ResultNode headerResult = calScoreForDoc(queryString, filepathMap.get("header"), HEADER_LINES, HEADER_WEIGHT);
+        ResultNode headerResult = calScoreLocal(queryString, headerIndex, HEADER_WEIGHT);
         for(Map.Entry<String, Double> e : headerResult.resultMap.entrySet())
             finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * headerResult.factor);
         count = 0;
@@ -104,7 +124,8 @@ public class QueryMatching {
         System.out.println(String.format("Search by Header Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
 
         startTime = System.currentTimeMillis();
-        ResultNode contextResult = calScoreForDoc(queryString, filepathMap.get("context"), CONTEXT_LINES, CONTEXT_WEIGHT);
+//        ResultNode contextResult = calScoreForDoc(queryString, filepathMap.get("context"), CONTEXT_LINES, CONTEXT_WEIGHT);
+        ResultNode contextResult = calScoreLocal(queryString, contextIndex, CONTEXT_WEIGHT);
         for(Map.Entry<String, Double> e : contextResult.resultMap.entrySet())
             finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * contextResult.factor);
         count = 0;
@@ -115,7 +136,8 @@ public class QueryMatching {
         System.out.println(String.format("Search by Context Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
 
         startTime = System.currentTimeMillis();
-        ResultNode urlResult = calScoreForDoc(queryString, filepathMap.get("url"), URL_LINES, URL_WEIGHT);
+//        ResultNode urlResult = calScoreForDoc(queryString, filepathMap.get("url"), URL_LINES, URL_WEIGHT);
+        ResultNode urlResult = calScoreLocal(queryString, urlIndex, URL_WEIGHT);
         for(Map.Entry<String, Double> e : urlResult.resultMap.entrySet())
             finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * urlResult.factor);
         count = 0;
@@ -127,27 +149,60 @@ public class QueryMatching {
 
         ArrayList<Map.Entry<String, Double>> resultList = sortByValueOrder(finalResult);
 
-        //TODO: uncomment this to write result into a file
-        FileWriterWBuffer fw = new FileWriterWBuffer(".\\SearchEngine\\top100Results.txt", false);
-        for (int i = 0; i < Math.min(100, resultList.size()); i++) {
-            String writeLine = resultList.get(i).getKey() + " " + urlMap.get(resultList.get(i).getKey());
-            fw.writeLine(writeLine);
-        }
-        fw.close();
+//        //TODO: uncomment this to write result into a file
+//        FileWriterWBuffer fw = new FileWriterWBuffer(".\\SearchEngine\\top100Results.txt", false);
+//        for (int i = 0; i < Math.min(100, resultList.size()); i++) {
+//            String writeLine = resultList.get(i).getKey() + " " + urlMap.get(resultList.get(i).getKey());
+//            fw.writeLine(writeLine);
+//        }
+//        fw.close();
         return getTopResults(finalResult, 10);
     }
 
-/*    private ArrayList<Map.Entry<String, Double>> getTitleScoreList(String queryString) {
-        String filepath = ".\\SearchEngine\\resources\\titleIndex\\title_tfidfWeight.txt";
-        ArrayList<Map.Entry<String, Double>> matchResult = calScoreForDoc(queryString.toLowerCase(), filepath, TITLE_LINES, TITLE_WEIGHT);
-        return matchResult;
+    private HashMap<String, ArrayList<DocNode>> readIndex(String filepath) {
+        HashMap<String, ArrayList<DocNode>> rtnMap = new HashMap<>();
+        FileReaderWBuffer fr = new FileReaderWBuffer(filepath);
+        ArrayList<String> lines = fr.readAll();
+        for (String s : lines) {
+            List<String> tokenList = tokenizer.getTokensFromString(s, "[^a-zA-Z0-9/.]+");
+            ArrayList<DocNode> docList = new ArrayList<>();
+            String term = tokenList.get(0);
+            for (int i = 1; i < tokenList.size(); i+= 2) {
+                double score = Double.valueOf(tokenList.get(i));
+                String docID = tokenList.get(i + 1);
+                DocNode newNode = new DocNode(score, docID);
+                docList.add(newNode);
+            }
+            rtnMap.put(term, docList);
+        }
+        return rtnMap;
     }
 
-    private ArrayList<Map.Entry<String, Double>> getContextScore(String queryString) {
-        String filepath = ".\\SearchEngine\\resources\\contextIndex\\context_tfidfWeight.txt";
-        ArrayList<Map.Entry<String, Double>> matchResult = calScoreForDoc(queryString.toLowerCase(), filepath, CONTEXT_LINES, CONTEXT_WEIGHT);
-        return matchResult;
-    }*/
+    private ResultNode calScoreLocal(String queryString, HashMap<String, ArrayList<DocNode>> indexMap, double weight) {
+        List<String> queryTokens = tokenizer.getTokensFromString(queryString.toLowerCase(), "[^a-zA-Z0-9/]+");
+        HashMap<String, Double> resultDocMap = new HashMap<String, Double>();
+        double maxScore = Double.MIN_VALUE;
+        int matchNum = 0;
+        for (String queryTerm: queryTokens) {
+            ArrayList<DocNode> foundResult = indexMap.get(queryTerm);
+            if (foundResult == null)
+                System.out.println("Didn't find line with \"" + queryTerm + "\"");
+            else {
+                // found the queryTerm in our index
+                //System.out.println("Found: " + foundResult);
+                matchNum++;
+                for (DocNode dn : foundResult) {
+                    if (dn.score > maxScore)
+                        maxScore = dn.score;
+                    // find all docID that this term is in
+                    resultDocMap.put(dn.docID, resultDocMap.getOrDefault(dn.docID, 0.0) + dn.score * weight);
+                }
+            }
+        }
+
+        System.out.println("Max Score is " + maxScore);
+        return new ResultNode(resultDocMap, maxScore, matchNum);
+    }
 
     private ResultNode calScoreForDoc(String queryString, String filepath, int numOfLine, double weight) {
         List<String> queryTokens = tokenizer.getTokensFromString(queryString.toLowerCase(), "[^a-zA-Z0-9/]+");
@@ -189,20 +244,6 @@ public class QueryMatching {
 
         System.out.println("Max Score is " + maxScore);
         return new ResultNode(resultDocMap, maxScore, matchNum);
-    }
-
-    private String simpleSearchLine(String filepath, String queryTerm) {
-        List<String> tokenList;
-        FileReaderWBuffer fr = new FileReaderWBuffer(filepath);
-        String line;
-
-        while ( (line = fr.readLine()) != null ) {
-            tokenList = tokenizer.getTokensFromString(line, "[^a-zA-Z0-9/.]+");
-            if (queryTerm.equals(tokenList.get(0))) {
-                return line;
-            }
-        }
-        return null;
     }
 
     // line number starts from 1!!!!!
@@ -264,7 +305,6 @@ public class QueryMatching {
      * @param filePath
      * @return
      */
-
     private HashMap<Integer, Integer> readOffsetFile (String filePath) {
         HashMap<Integer, Integer> lineMap = new HashMap<>();
         FileReaderWBuffer fr = new FileReaderWBuffer(filePath);

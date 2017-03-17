@@ -9,12 +9,12 @@ import java.util.*;
  * Created by cjk98 on 3/4/2017.
  */
 public class QueryMatching {
-    private final static String QUERY_STRING = "information retrieval";
-    private final static double ANCHOR_WEIGHT = 0.5;
-    private final static double TITLE_WEIGHT = 0.8;
-    private final static double HEADER_WEIGHT = 0.1;
-    private final static double CONTEXT_WEIGHT = 0.4;
-    private final static double URL_WEIGHT = 0.6;
+    private static String QUERY_STRING = "information retrieval";
+    private static double ANCHOR_WEIGHT = 0.5;
+    private static double TITLE_WEIGHT = 0.8;
+    private static double HEADER_WEIGHT = 0.1;
+    private static double CONTEXT_WEIGHT = 0.4;
+    private static double URL_WEIGHT = 0.6;
     private final static int ANCHOR_LINES = 83564;
     private final static int TITLE_LINES = 12488;
     private final static int HEADER_LINES = 21770;
@@ -86,13 +86,58 @@ public class QueryMatching {
         urlIndex = readIndex(filepathMap.get("url"));
     }
 
-    public ArrayList<String> search(String queryString) {
+    public ArrayList<String> search(String queryString, int desiredNum) {
+        long startTime;
+        int count;
+
+        finalResult.clear();
+        startTime = System.currentTimeMillis();
+        ResultNode anchorResult = calScoreLocal(queryString, titleIndex, ANCHOR_WEIGHT);
+        for(Map.Entry<String, Double> e : anchorResult.resultMap.entrySet())
+            finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * anchorResult.factor);
+//        System.out.println(String.format("Search by AnchorText Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
+
+        startTime = System.currentTimeMillis();
+        ResultNode titleResult = calScoreLocal(queryString, titleIndex, TITLE_WEIGHT);
+        for(Map.Entry<String, Double> e : titleResult.resultMap.entrySet())
+            finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * titleResult.factor);
+//        System.out.println(String.format("Search by Title Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
+
+        startTime = System.currentTimeMillis();
+        ResultNode headerResult = calScoreLocal(queryString, headerIndex, HEADER_WEIGHT);
+        for(Map.Entry<String, Double> e : headerResult.resultMap.entrySet())
+            finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * headerResult.factor);
+//        System.out.println(String.format("Search by Header Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
+
+        startTime = System.currentTimeMillis();
+        ResultNode contextResult = calScoreLocal(queryString, contextIndex, CONTEXT_WEIGHT);
+        for(Map.Entry<String, Double> e : contextResult.resultMap.entrySet())
+            finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * contextResult.factor);
+//        System.out.println(String.format("Search by Context Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
+
+        startTime = System.currentTimeMillis();
+        ResultNode urlResult = calScoreLocal(queryString, urlIndex, URL_WEIGHT);
+        for(Map.Entry<String, Double> e : urlResult.resultMap.entrySet())
+            finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * urlResult.factor);
+//        System.out.println(String.format("Search by URL Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
+
+//        //TODO: uncomment this to write result into a file
+//        ArrayList<Map.Entry<String, Double>> resultList = sortByValueOrder(finalResult);
+//        FileWriterWBuffer fw = new FileWriterWBuffer(".\\SearchEngine\\"+ queryString + "Results.txt", false);
+//        for (int i = 0; i < Math.min(desiredNum, resultList.size()); i++) {
+//            String writeLine = resultList.get(i).getKey() + " " + urlMap.get(resultList.get(i).getKey());
+//            fw.writeLine(writeLine);
+//        }
+//        fw.close();
+        return getTopResults(finalResult, desiredNum);
+    }
+
+    public ArrayList<String> search2(String queryString, int desiredNum) {
         long startTime;
         int count;
 
         startTime = System.currentTimeMillis();
-//        ResultNode anchorResult = calScoreForDoc(queryString, filepathMap.get("anchor"), ANCHOR_LINES, ANCHOR_WEIGHT);
-        ResultNode anchorResult = calScoreLocal(queryString, titleIndex, ANCHOR_WEIGHT);
+        ResultNode anchorResult = calScoreForDoc(queryString, filepathMap.get("anchor"), ANCHOR_LINES, ANCHOR_WEIGHT);
         for(Map.Entry<String, Double> e : anchorResult.resultMap.entrySet())
             finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * anchorResult.factor);
         for(Map.Entry<String, Double> e : anchorResult.resultMap.entrySet())
@@ -100,44 +145,40 @@ public class QueryMatching {
         System.out.println(String.format("Search by AnchorText Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
 
         startTime = System.currentTimeMillis();
-//        ResultNode titleResult = calScoreForDoc(queryString, filepathMap.get("title"), TITLE_LINES, TITLE_WEIGHT);
-        ResultNode titleResult = calScoreLocal(queryString, titleIndex, TITLE_WEIGHT);
+        ResultNode titleResult = calScoreForDoc(queryString, filepathMap.get("title"), TITLE_LINES, TITLE_WEIGHT);
         for(Map.Entry<String, Double> e : titleResult.resultMap.entrySet())
             finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * titleResult.factor);
         count = 0;
         for(Map.Entry<String, Double> e : titleResult.resultMap.entrySet()) {
 //            if (count++ < 30 && e != null)
-                System.out.println(e.getKey() + "     " + e.getValue());
+            System.out.println(e.getKey() + "     " + e.getValue());
         }
         System.out.println(String.format("Search by Title Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
 
         startTime = System.currentTimeMillis();
-//        ResultNode headerResult = calScoreForDoc(queryString, filepathMap.get("header"), HEADER_LINES, HEADER_WEIGHT);
-        ResultNode headerResult = calScoreLocal(queryString, headerIndex, HEADER_WEIGHT);
+        ResultNode headerResult = calScoreForDoc(queryString, filepathMap.get("header"), HEADER_LINES, HEADER_WEIGHT);
         for(Map.Entry<String, Double> e : headerResult.resultMap.entrySet())
             finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * headerResult.factor);
         count = 0;
         for(Map.Entry<String, Double> e : headerResult.resultMap.entrySet()) {
 //            if (count++ < 30 && e != null)
-                System.out.println(e.getKey() + "     " + e.getValue());
+            System.out.println(e.getKey() + "     " + e.getValue());
         }
         System.out.println(String.format("Search by Header Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
 
         startTime = System.currentTimeMillis();
-//        ResultNode contextResult = calScoreForDoc(queryString, filepathMap.get("context"), CONTEXT_LINES, CONTEXT_WEIGHT);
-        ResultNode contextResult = calScoreLocal(queryString, contextIndex, CONTEXT_WEIGHT);
+        ResultNode contextResult = calScoreForDoc(queryString, filepathMap.get("context"), CONTEXT_LINES, CONTEXT_WEIGHT);
         for(Map.Entry<String, Double> e : contextResult.resultMap.entrySet())
             finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * contextResult.factor);
         count = 0;
         for(Map.Entry<String, Double> e : contextResult.resultMap.entrySet()) {
 //            if (count++ < 30 && e != null)
-                System.out.println(e.getKey() + "     " + e.getValue());
+            System.out.println(e.getKey() + "     " + e.getValue());
         }
         System.out.println(String.format("Search by Context Done: %s ms Elapsed", System.currentTimeMillis() - startTime));
 
         startTime = System.currentTimeMillis();
-//        ResultNode urlResult = calScoreForDoc(queryString, filepathMap.get("url"), URL_LINES, URL_WEIGHT);
-        ResultNode urlResult = calScoreLocal(queryString, urlIndex, URL_WEIGHT);
+        ResultNode urlResult = calScoreForDoc(queryString, filepathMap.get("url"), URL_LINES, URL_WEIGHT);
         for(Map.Entry<String, Double> e : urlResult.resultMap.entrySet())
             finalResult.put(e.getKey(), finalResult.getOrDefault(e.getKey(), 0.0) + e.getValue() * urlResult.factor);
         count = 0;
@@ -156,7 +197,7 @@ public class QueryMatching {
 //            fw.writeLine(writeLine);
 //        }
 //        fw.close();
-        return getTopResults(finalResult, 10);
+        return getTopResults(finalResult, desiredNum);
     }
 
     private HashMap<String, ArrayList<DocNode>> readIndex(String filepath) {
@@ -185,8 +226,9 @@ public class QueryMatching {
         int matchNum = 0;
         for (String queryTerm: queryTokens) {
             ArrayList<DocNode> foundResult = indexMap.get(queryTerm);
-            if (foundResult == null)
-                System.out.println("Didn't find line with \"" + queryTerm + "\"");
+            if (foundResult == null) {
+//                System.out.println("Didn't find line with \"" + queryTerm + "\"");
+            }
             else {
                 // found the queryTerm in our index
                 //System.out.println("Found: " + foundResult);
@@ -200,7 +242,7 @@ public class QueryMatching {
             }
         }
 
-        System.out.println("Max Score is " + maxScore);
+//        System.out.println("Max Score is " + maxScore);
         return new ResultNode(resultDocMap, maxScore, matchNum);
     }
 
@@ -347,14 +389,32 @@ public class QueryMatching {
             String filepath = e.getValue();
             new GetFileLineOffset(filepath, filepath.replace(".txt", "") + "Offset.txt");
         }
+    }
 
+    public void setAnchorWeight(double weight) {
+        this.ANCHOR_WEIGHT = weight;
+    }
 
+    public void setTitleWeight(double weight) {
+        this.TITLE_WEIGHT = weight;
+    }
+
+    public void setHeaderWeight(double weight) {
+        this.HEADER_WEIGHT = weight;
+    }
+
+    public void setContextWeight(double weight) {
+        this.CONTEXT_WEIGHT = weight;
+    }
+
+    public void setUrlWeight(double weight) {
+        this.URL_WEIGHT = weight;
     }
 
     public static void main (String arg[]){
         long start = System.currentTimeMillis();
         QueryMatching testObj = new QueryMatching();
-        testObj.search(QUERY_STRING);
+        testObj.search(QUERY_STRING, 10);
 //        testObj.offsetHelper();
 
 //        HashMap<Integer, Integer> lineMap = testObj.readOffsetFile(filepathMap.get("title").replace(".txt", "") + "Offset.txt");

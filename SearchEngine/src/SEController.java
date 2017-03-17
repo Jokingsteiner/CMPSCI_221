@@ -62,7 +62,7 @@ public class SEController implements Initializable {
     @FXML
     private void handleSearch(ActionEvent event) {
         long start = System.currentTimeMillis();
-        ArrayList<String> result = qmObj.search(seTextField.getText());
+        ArrayList<String> result = qmObj.search(seTextField.getText(), 10);
 //        resultList.addAll(result);
 ////        System.out.println(resultList);
 ////        resultTable.setItems(resultList);
